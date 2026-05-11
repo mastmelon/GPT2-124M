@@ -1,0 +1,25 @@
+Differences with original transformer paper
+1. No encoder
+2. Layer normalization moved to the input of each sub-block
+3. Additional layer normalization was added after the final self-attention block
+4. Input flow through block unmodified via Residual connection
+    - Gradients from the top to the input via residual connection
+
+Using approximate version of GELU (tanh) in MLP
+- approximate version was fast. This is not the case anymore
+- we are replicating GPT-2 exactly
+
+GELU instead of RELU
+- dead RELU neuron problem - Activation that fell on the tail of RELU get gradient = 0, no change or adaptation possible
+
+
+Attention
+- Multiplication by v ~ weighted sum of the values of the tokens that we found interesting after QK'
+
+
+Next:
+1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
+
+
+
+
