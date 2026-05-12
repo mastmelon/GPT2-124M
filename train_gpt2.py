@@ -178,9 +178,19 @@ class GPT(nn.Module):
 
 # ----------------------------------------------- # -----------------------------------------------
 
-model = GPT.from_pretrained('gpt2')
+# ======== attempt to autodetect device ==========
+device = "cpu"
+if torch.cuda.is_available():
+    device = "cuda"
+elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+    device = "mps"
+print(f"using device: {device}")
+# ========  ========== ========== ========== ======
+
+model = GPT(GPTConfig())
+#model = GPT.from_pretrained('gpt2')
 model.eval()
-#model.to('cuda')
+model.to(device)
 
 num_return_sequence = 5
 max_len = 30
@@ -191,8 +201,7 @@ enc = tiktoken.get_encoding('gpt2')
 tokens = enc.encode("Hello, I'm a language model,")
 tokens = torch.tensor(tokens, dtype=torch.long)
 tokens = tokens.unsqueeze(0).repeat(num_return_sequence, 1) # (5, #tokens)
-#x = tokens.to('cuda')
-x = tokens
+x = tokens.to(device)
 
 torch.manual_seed(42)
 #torch.cuda.manual_seed(42)
