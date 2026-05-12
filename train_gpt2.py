@@ -6,14 +6,6 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
-# @dataclass
-# class GPTConfig:
-#     block_size: int = 256  # context window size
-#     vocab_size: int = 65  # max number of distinct tokens
-#     n_layer: int = 6  # N = number of blocks
-#     n_head: int = 6
-#     n_embd: int = 384
-
 @dataclass
 class GPTConfig:
     block_size: int = 1024  # max sequence length
@@ -193,28 +185,58 @@ print(f"using device: {device}")
 # ========  ========== ========== ========== ======
 
 import tiktoken
-enc = tiktoken.get_encoding('gpt2')
 
-with open('input.txt', 'r') as f:
-    text = f.read()
-text = text[:1000]
-tokens = enc.encode(text)
-B, T = 4, 32
-buf = torch.tensor(tokens[:B*T + 1])
-x = buf[:-1].view(B,T)
-y = buf[1:].view(B, T)
-x = x.to(device)
-y = y.to(device)
+
+class DataLoaderLite:
+
+    def __init__(self, B, T):
+        self.B = B
+        self.T = T
+
+        with open('input.txt', 'r') as f:
+            text = f.read()
+        enc = tiktoken.get_encoding('gpt2')
+        tokens = enc.encode(text)
+
+        self.tokens = torch.tensor(tokens)
+        print(f"loaded {len(self.tokens)} tokens")
+        print(f"1 epoch = {len(self.tokens) // (B * T)} batches")
+
+        self.current_position = 0
+
+    def next_batch(self):
+        B, T = self.B, self.T
+        buf = self.tokens[self.current_position: self.current_position + B * T + 1]
+        x = (buf[:-1]).view(B, T)  # inputs
+        y = (buf[1:]).view(B, T)  # targets
+
+        self.current_position += B * T
+
+        if self.current_position + (B * T + 1) > len(self.tokens):
+            self.current_position = 0
+
+        return x, y
+
+
+train_loader = DataLoaderLite(B=4, T=32)
 
 # get logits
 model = GPT(GPTConfig())
-#model = GPT.from_pretrained('gpt2')
-#model.eval()
 model.to(device)
-logits, loss = model(x, y)
 
-print(loss)
-import sys; sys.exit(0)
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+for i in range(50):
+    x, y = train_loader.next_batch()
+    x, y = x.to(device), y.to(device)  # move tensors to GPU
+    optimizer.zero_grad()
+    logits, loss = model(x, y)
+    loss.backward()
+    optimizer.step()
+    print(f"step {i}, loss: {loss.item()}")
+
+import sys;
+
+sys.exit(0)
 
 num_return_sequence = 5
 max_len = 30
@@ -228,23 +250,23 @@ max_len = 30
 # x = tokens.to(device)
 
 torch.manual_seed(42)
-#torch.cuda.manual_seed(42)
+# torch.cuda.manual_seed(42)
 
 while x.size(1) < max_len:
     with torch.no_grad():
-        logits = model(x) # (B, T, vocab_size)
+        logits = model(x)  # (B, T, vocab_size)
         # Take the logits of last token
-        logits = logits[:, -1, :] # B,vocab_size
+        logits = logits[:, -1, :]  # B,vocab_size
         # Prob using softmax
         probs = F.softmax(logits, -1)
 
         # top-k prob
         topk_probs, topk_indices = torch.topk(probs, 50, dim=-1)
-        ix = torch.multinomial(topk_probs, 1) # (B,1)
+        ix = torch.multinomial(topk_probs, 1)  # (B,1)
         # gather corresponding indices = token numerical value
-        xcol = torch.gather(topk_indices, -1, ix) # (B,1)
+        xcol = torch.gather(topk_indices, -1, ix)  # (B,1)
 
-        x = torch.cat((x, xcol), dim=1) # (B, T) (B,1)
+        x = torch.cat((x, xcol), dim=1)  # (B, T) (B,1)
 
 # print the generated text
 
