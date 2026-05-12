@@ -123,8 +123,11 @@ class GPT(nn.Module):
         # forward the final layernorm and the classifier
         x = self.transformer.ln_f(x)
         logits = self.lm_head(x)  # (B, T, vocab_size)
-
-        return logits
+        loss = None
+        if targets is not None:
+            # flatten (B,T) -> single dimension | targets also flatten
+            loss = F.cross_entropy(logits.view(-1, logits.size(-1)), targets.view(-1))
+        return logits, loss
 
     @classmethod
     def from_pretrained(cls, model_type):
@@ -179,29 +182,50 @@ class GPT(nn.Module):
 # ----------------------------------------------- # -----------------------------------------------
 
 # ======== attempt to autodetect device ==========
+
 device = "cpu"
 if torch.cuda.is_available():
     device = "cuda"
 elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
+
 # ========  ========== ========== ========== ======
 
+import tiktoken
+enc = tiktoken.get_encoding('gpt2')
+
+with open('input.txt', 'r') as f:
+    text = f.read()
+text = text[:1000]
+tokens = enc.encode(text)
+B, T = 4, 32
+buf = torch.tensor(tokens[:B*T + 1])
+x = buf[:-1].view(B,T)
+y = buf[1:].view(B, T)
+x = x.to(device)
+y = y.to(device)
+
+# get logits
 model = GPT(GPTConfig())
 #model = GPT.from_pretrained('gpt2')
-model.eval()
+#model.eval()
 model.to(device)
+logits, loss = model(x, y)
+
+print(loss)
+import sys; sys.exit(0)
 
 num_return_sequence = 5
 max_len = 30
 
-# input tokens
-import tiktoken
-enc = tiktoken.get_encoding('gpt2')
-tokens = enc.encode("Hello, I'm a language model,")
-tokens = torch.tensor(tokens, dtype=torch.long)
-tokens = tokens.unsqueeze(0).repeat(num_return_sequence, 1) # (5, #tokens)
-x = tokens.to(device)
+# # input tokens
+# import tiktoken
+# enc = tiktoken.get_encoding('gpt2')
+# tokens = enc.encode("Hello, I'm a language model,")
+# tokens = torch.tensor(tokens, dtype=torch.long)
+# tokens = tokens.unsqueeze(0).repeat(num_return_sequence, 1) # (5, #tokens)
+# x = tokens.to(device)
 
 torch.manual_seed(42)
 #torch.cuda.manual_seed(42)
