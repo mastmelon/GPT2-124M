@@ -20,6 +20,11 @@ Attention
 Next:
 1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
 
+Parameters sharing token encoding and lm_head
+- self.transformer.wte.weight = self.lm_head.weight # copying the data pointer or reference
+- https://arxiv.org/abs/1608.05859
+
+
 
 
 
