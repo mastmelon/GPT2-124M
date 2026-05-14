@@ -24,6 +24,9 @@ flash attention
 - kernel fusion operation
 - Matmul | Mask | Softmax | Dropout | Matmul -> Fused Kernel
 
+nice numbers
+- kernel - blocks - computation of nice blocks - computation of leftovers
+
 Next:
 1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
 
