@@ -16,6 +16,13 @@ GELU instead of RELU
 Attention
 - Multiplication by v ~ weighted sum of the values of the tokens that we found interesting after QK'
 
+torch.compile
+- Doesn't run in python interpreter style. Look at the complete code and optimize
+- read/write in batches - optimize round trips to the HBM memory - kernel fusion?
+
+flash attention
+- kernel fusion operation
+- Matmul | Mask | Softmax | Dropout | Matmul -> Fused Kernel
 
 Next:
 1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py

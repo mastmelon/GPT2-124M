@@ -44,11 +44,15 @@ class CausalSelfAttention(nn.Module):
         q = q.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
         v = v.view(B, T, self.n_head, C // self.n_head).transpose(1, 2)
 
-        att = ((q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1))))  # B, nh, T, T
-        # masking
-        att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))  # B, nh, T, T
-        att = F.softmax(att, dim=-1)
-        y = att @ v  # (B, nh, T, T) @ (B, nh, T, hs) => (B, nh, T, hs)
+        # att = ((q @ k.transpose(-2, -1)) * (1.0 / math.sqrt(k.size(-1))))  # B, nh, T, T
+        # # masking
+        # att = att.masked_fill(self.bias[:, :, :T, :T] == 0, float('-inf'))  # B, nh, T, T
+        # att = F.softmax(att, dim=-1)
+        # y = att @ v  # (B, nh, T, T) @ (B, nh, T, hs) => (B, nh, T, hs)
+
+        # Flash attention
+        y = F.scaled_dot_product_attention(q,k,v,is_causal=True)
+
         y = y.transpose(1, 2).contiguous().view(B, T, C)  # cat all heads side by side
 
         # output projection
@@ -245,6 +249,7 @@ torch.set_float32_matmul_precision('high') # using Tensorflow32, TF32. Tell pyto
 # get logits
 model = GPT(GPTConfig())
 model.to(device)
+# model = torch.compile(model)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
 for i in range(50):
