@@ -27,6 +27,13 @@ flash attention
 nice numbers
 - kernel - blocks - computation of nice blocks - computation of leftovers
 
+global norm clipping
+-
+
+Learning rate
+- Linear LR warmup at first
+- Cosine decay till a min value is reached
+
 Next:
 1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
 
