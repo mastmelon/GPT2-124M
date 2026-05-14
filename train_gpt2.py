@@ -25,7 +25,7 @@ class CausalSelfAttention(nn.Module):
         self.c_attn = nn.Linear(config.n_embd, 3 * config.n_embd)
         # output projection
         self.c_proj = nn.Linear(config.n_embd, config.n_embd)  # Wo
-        self.c_proj.NANOGPT_SCALE_INIT = 1 # attaching this flag
+        self.c_proj.NANOGPT_SCALE_INIT = 1  # attaching this flag
 
         self.n_embd = config.n_embd
         self.n_head = config.n_head
@@ -102,20 +102,19 @@ class GPT(nn.Module):
         self.lm_head = nn.Linear(config.n_embd, config.vocab_size, bias=False)  # Introduced in GPT-2
 
         # weight sharing scheme
-        self.transformer.wte.weight = self.lm_head.weight # copying the data pointer or reference
+        self.transformer.wte.weight = self.lm_head.weight  # copying the data pointer or reference
         self.apply(self._init_weights)
 
     def _init_weights(self, module):
         if isinstance(module, nn.Linear):
             std = 0.02
             if hasattr(module, 'NANOGPT_SCALE_INIT'):
-                std *= (2 * self.config.n_layer) ** -0.5 # 2 because every block has 2 additions
+                std *= (2 * self.config.n_layer) ** -0.5  # 2 because every block has 2 additions
             torch.nn.init.normal_(module.weight, mean=0.0, std=std)
             if module.bias is not None:
                 torch.nn.init.zeros_(module.bias)
         elif isinstance(module, nn.Embedding):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
-
 
     def forward(self, idx, targets=None):
         # idx is of shape (B, T)
@@ -202,6 +201,7 @@ print(f"using device: {device}")
 
 # ========  ========== ========== ========== ======
 
+import time
 import tiktoken
 
 
@@ -236,21 +236,33 @@ class DataLoaderLite:
         return x, y
 
 
-train_loader = DataLoaderLite(B=4, T=32)
+train_loader = DataLoaderLite(B=4, T=32) # by default we want to max out the Batch size which fits on GPU
+torch.set_float32_matmul_precision('high') # using Tensorflow32, TF32. Tell pytorch what kind of kernels to run
+# ^ Expect only computations to be faster by factor of 8. For storing nums we are still using float32 and memory movement
+# limits still apply
+
 
 # get logits
 model = GPT(GPTConfig())
 model.to(device)
 
 optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
-for i in range(100):
+for i in range(50):
+    t0 = time.time()
     x, y = train_loader.next_batch()
     x, y = x.to(device), y.to(device)  # move tensors to GPU
     optimizer.zero_grad()
-    logits, loss = model(x, y)
+
+    # https://docs.pytorch.org/tutorials/recipes/recipes/amp_recipe.html
+    with torch.autocast(device_type=device, dtype=torch.bfloat16):
+        logits, loss = model(x, y)
     loss.backward()
     optimizer.step()
-    print(f"step {i}, loss: {loss.item()}")
+    # torch.cuda.synchronize()
+    t1 = time.time()
+    dt = (t1 - t0) * 1000  # milisecs
+    tokens_per_sec = (train_loader.B * train_loader.T) / (t1 - t0)
+    print(f"step {i}, loss: {loss.item()}, dt: {dt:.2f}ms, tok/sec: {tokens_per_sec:.2f}")
 
 import sys;
 
