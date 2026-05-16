@@ -47,8 +47,14 @@ Weight decay and fused setting in AdamW
 Gradient accumulation
 - Large batch size (can't go small because hyperparameters are co-related)
 - Run forward backward pass multiple times, accumulate gradient and then single update of parameters
+- not implemented in code
 
+Distributed DataParallel - ddp
+- not implemented in code
 
+Dataset
+- Fineweb
+- Fineweb edu - sample-10T
 
 Next:
 1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
