@@ -194,8 +194,6 @@ class GPT(nn.Module):
 
 # ----------------------------------------------- # -----------------------------------------------
 
-# ======== attempt to autodetect device ==========
-
 device = "cpu"
 if torch.cuda.is_available():
     device = "cuda"
@@ -203,7 +201,7 @@ elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
     device = "mps"
 print(f"using device: {device}")
 
-# ========  ========== ========== ========== ======
+# ----------------------------------------------- # -----------------------------------------------
 
 import time
 import tiktoken
@@ -295,7 +293,7 @@ for i in range(50):
     tokens_per_sec = (train_loader.B * train_loader.T) / (t1 - t0)
     print(f"step {i}, loss: {loss.item()}, norm: {norm:.4f} dt: {dt:.2f}ms, tok/sec: {tokens_per_sec:.2f}")
 
-import sys;
+import sys
 
 sys.exit(0)
 

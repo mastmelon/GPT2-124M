@@ -22,17 +22,33 @@ torch.compile
 
 flash attention
 - kernel fusion operation
+- mindful of memory hierarchy
 - Matmul | Mask | Softmax | Dropout | Matmul -> Fused Kernel
+- fewer reads and writes to HBM
+- attention matrix
+- uses - scaling online softmax
 
 nice numbers
 - kernel - blocks - computation of nice blocks - computation of leftovers
 
 global norm clipping
--
+- ?
 
 Learning rate
 - Linear LR warmup at first
 - Cosine decay till a min value is reached
+
+Weight decay and fused setting in AdamW
+- avoiding extreme highs
+- not implemented in code
+
+- Hyperparameters are co-related
+
+Gradient accumulation
+- Large batch size (can't go small because hyperparameters are co-related)
+- Run forward backward pass multiple times, accumulate gradient and then single update of parameters
+
+
 
 Next:
 1. huggingface/transformer lib GPT2 impl - shttps://github.com/huggingface/transformers/blob/main/src/transformers/models/gpt2/modeling_gpt2.py
